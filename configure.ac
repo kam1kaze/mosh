@@ -178,7 +178,6 @@ AC_SEARCH_LIBS([inet_addr], [nsl])
 
 # Checks for header files.
 AC_CHECK_HEADERS([m4_normalize([
-  arpa/inet.h
   errno.h
   fcntl.h
   langinfo.h
