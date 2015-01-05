@@ -268,18 +268,43 @@ static bool *get_DEC_mode( int param, Framebuffer *fb ) {
     return &(fb->ds.auto_wrap_mode);
   case 25:
     return &(fb->ds.cursor_visible);
+  case 1000:           /* xterm mouse 1 (normal) */
+    return &(fb->ds.vt100_mouse);
+  case 1002:           /* xterm mouse 2 (inc. button drags) */
+    return &(fb->ds.xterm_mouse);
+  case 1005:           /* xterm UTF8 mouse */
+    return &(fb->ds.xterm_utf8_mouse);
+  case 1006:           /* xterm extended mouse */
+    return &(fb->ds.xterm_extended_mouse);
+  case 2004: /* bracketed paste */
+    return &(fb->ds.bracketed_paste);
   }
   return NULL;
+}
+
+/* helper for CSI_DECSM and CSI_DECRM */
+void set_if_available( bool *mode, bool value )
+{
+  if ( mode ) { *mode = value; }
 }
 
 /* set private mode */
 void CSI_DECSM( Framebuffer *fb, Dispatcher *dispatch )
 {
   for ( int i = 0; i < dispatch->param_count(); i++ ) {
-    bool *mode = get_DEC_mode( dispatch->getparam( i, 0 ), fb );
-    if ( mode ) {
-      *mode = true;
+    int param = dispatch->getparam( i, 0 );
+
+    if ( (param == 1000) || (param == 1002) ) {
+      /* we believe all mouse modes should be set to false
+	 when either of these two modes are enabled */
+      /* XXX can we cite something for this? -KJW 15Dec2014 */
+      set_if_available( get_DEC_mode( 1000, fb ), false );
+      set_if_available( get_DEC_mode( 1002, fb ), false );
+      set_if_available( get_DEC_mode( 1005, fb ), false );
+      set_if_available( get_DEC_mode( 1006, fb ), false );
     }
+
+    set_if_available( get_DEC_mode( param, fb ), true );
   }
 }
 
@@ -287,10 +312,7 @@ void CSI_DECSM( Framebuffer *fb, Dispatcher *dispatch )
 void CSI_DECRM( Framebuffer *fb, Dispatcher *dispatch )
 {
   for ( int i = 0; i < dispatch->param_count(); i++ ) {
-    bool *mode = get_DEC_mode( dispatch->getparam( i, 0 ), fb );
-    if ( mode ) {
-      *mode = false;
-    }
+    set_if_available( get_DEC_mode( dispatch->getparam( i, 0 ), fb ), false );
   }
 }
 

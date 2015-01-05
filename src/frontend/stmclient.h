@@ -45,9 +45,15 @@
 class STMClient {
 private:
   std::string ip;
-  int port;
+  std::string port;
   std::string key;
   bool forward_agent;
+  int escape_key;
+  int escape_pass_key;
+  int escape_pass_key2;
+  bool escape_requires_lf;
+  std::wstring escape_key_help;
+
   int escape_key;
   int escape_pass_key;
   int escape_pass_key2;
@@ -83,7 +89,7 @@ private:
   void resume( void ); /* restore state after SIGCONT */
 
 public:
-   STMClient( const char *s_ip, int s_port, const char *s_key, const char *predict_mode, bool s_forward_agent )
+   STMClient( const char *s_ip, const char *s_port, const char *s_key, const char *predict_mode, bool s_forward_agent )
      : ip( s_ip ), port( s_port ), key( s_key ), forward_agent( s_forward_agent ),
     escape_key( 0x1E ), escape_pass_key( '^' ), escape_pass_key2( '^' ),
     escape_requires_lf( false ), escape_key_help( L"?" ),

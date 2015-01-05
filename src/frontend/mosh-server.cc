@@ -50,8 +50,7 @@
 #include <utempter.h>
 #endif
 #include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#include <netdb.h>
 #include <time.h>
 #include <sys/stat.h>
 
@@ -234,13 +233,6 @@ int main( int argc, char *argv[] )
   }
 
   /* Sanity-check arguments */
-  if ( desired_ip
-       && ( strspn( desired_ip, "0123456789." ) != strlen( desired_ip ) ) ) {
-    fprintf( stderr, "%s: Bad IP address (%s)\n", argv[ 0 ], desired_ip );
-    print_usage( argv[ 0 ] );
-    exit( 1 );
-  }
-
   int dpl, dph;
   if ( desired_port && ! Connection::parse_portrange( desired_port, dpl, dph ) ) {
     fprintf( stderr, "%s: Bad UDP port range (%s)\n", argv[ 0 ], desired_port );
@@ -341,10 +333,16 @@ int run_server( const char *desired_ip, const char *desired_port,
 		bool with_agent_fwd ) {
   /* get initial window size */
   struct winsize window_size;
-  if ( ioctl( STDIN_FILENO, TIOCGWINSZ, &window_size ) < 0 ) {
-    perror( "ioctl TIOCGWINSZ" );
-    fprintf( stderr, "If running with ssh, please use ssh -t to provide a PTY.\n" );
-    exit( 1 );
+  if ( ioctl( STDIN_FILENO, TIOCGWINSZ, &window_size ) < 0 ||
+       window_size.ws_col == 0 ||
+       window_size.ws_row == 0 ) {
+    fprintf( stderr, "Server started without pseudo-terminal. Opening 80x24 terminal.\n" );
+
+    /* Fill in sensible defaults. */
+    /* They will be overwritten by client on first connection. */
+    memset( &window_size, 0, sizeof( window_size ) );
+    window_size.ws_col = 80;
+    window_size.ws_row = 24;
   }
 
   /* open parser and terminal */
@@ -358,7 +356,7 @@ int run_server( const char *desired_ip, const char *desired_port,
     network->set_verbose();
   }
 
-  printf( "\nMOSH CONNECT %d %s\n", network->port(), network->get_key().c_str() );
+  printf( "\nMOSH CONNECT %s %s\n", network->port().c_str(), network->get_key().c_str() );
   fflush( stdout );
 
   /* don't let signals kill us */
@@ -369,13 +367,6 @@ int run_server( const char *desired_ip, const char *desired_port,
   fatal_assert( 0 == sigaction( SIGHUP, &sa, NULL ) );
   fatal_assert( 0 == sigaction( SIGPIPE, &sa, NULL ) );
 
-  struct termios child_termios;
-
-  /* Get terminal configuration */
-  if ( tcgetattr( STDIN_FILENO, &child_termios ) < 0 ) {
-    perror( "tcgetattr" );
-    exit( 1 );
-  }
 
   /* detach from terminal */
   pid_t the_pid = fork();
@@ -400,13 +391,7 @@ int run_server( const char *desired_ip, const char *desired_port,
 
   int master;
 
-#ifdef HAVE_IUTF8
-  if ( !(child_termios.c_iflag & IUTF8) ) {
-    /* SSH should also convey IUTF8 across connection. */
-    //    fprintf( stderr, "Warning: Locale is UTF-8 but termios IUTF8 flag not set. Setting IUTF8 flag.\n" );
-    child_termios.c_iflag |= IUTF8;
-  }
-#else
+#ifndef HAVE_IUTF8
   fprintf( stderr, "\nWarning: termios IUTF8 flag not defined.\nCharacter-erase of multibyte character sequence\nprobably does not work properly on this platform.\n" );
 #endif /* HAVE_IUTF8 */
 
@@ -438,7 +423,7 @@ int run_server( const char *desired_ip, const char *desired_port,
   snprintf( utmp_entry, 64, "mosh [%d]", getpid() );
 
   /* Fork child process */
-  pid_t child = forkpty( &master, NULL, &child_termios, &window_size );
+  pid_t child = forkpty( &master, NULL, NULL, &window_size );
 
   if ( child == -1 ) {
     perror( "forkpty" );
@@ -458,6 +443,22 @@ int run_server( const char *desired_ip, const char *desired_port,
 
     /* close server-related file descriptors */
     delete network;
+
+    /* set IUTF8 if available */
+#ifdef HAVE_IUTF8
+    struct termios child_termios;
+    if ( tcgetattr( STDIN_FILENO, &child_termios ) < 0 ) {
+      perror( "tcgetattr" );
+      exit( 1 );
+    }
+
+    child_termios.c_iflag |= IUTF8;
+
+    if ( tcsetattr( STDIN_FILENO, TCSANOW, &child_termios ) < 0 ) {
+      perror( "tcsetattr" );
+      exit( 1 );
+    }
+#endif /* HAVE_IUTF8 */
 
     /* set TERM */
     const char default_term[] = "xterm";
@@ -548,8 +549,8 @@ void serve( int host_fd, Terminal::Complete &terminal, ServerConnection &network
   #ifdef HAVE_UTEMPTER
   bool connected_utmp = false;
 
-  struct in_addr saved_addr;
-  saved_addr.s_addr = 0;
+  Addr saved_addr;
+  socklen_t saved_addr_len = 0;
   #endif
 
   agent.attach_oob(network.oob());
@@ -636,13 +637,24 @@ void serve( int host_fd, Terminal::Complete &terminal, ServerConnection &network
 	  #ifdef HAVE_UTEMPTER
 	  /* update utmp entry if we have become "connected" */
 	  if ( (!connected_utmp)
-	       || ( saved_addr.s_addr != network.get_remote_ip().s_addr ) ) {
+	       || saved_addr_len != network.get_remote_addr_len()
+	       || memcmp( &saved_addr, &network.get_remote_addr(),
+			  saved_addr_len ) != 0 ) {
 	    utempter_remove_record( host_fd );
 
-	    saved_addr = network.get_remote_ip();
+	    saved_addr = network.get_remote_addr();
+	    saved_addr_len = network.get_remote_addr_len();
+
+	    char host[ NI_MAXHOST ];
+	    int errcode = getnameinfo( &saved_addr.sa, saved_addr_len,
+				       host, sizeof( host ), NULL, 0,
+				       NI_NUMERICHOST );
+	    if ( errcode != 0 ) {
+	      throw NetworkException( std::string( "serve: getnameinfo: " ) + gai_strerror( errcode ), 0 );
+	    }
 
 	    char tmp[ 64 ];
-	    snprintf( tmp, 64, "%s via mosh [%d]", inet_ntoa( saved_addr ), getpid() );
+	    snprintf( tmp, 64, "%s via mosh [%d]", host, getpid() );
 	    utempter_add_record( host_fd, tmp );
 
 	    connected_utmp = true;

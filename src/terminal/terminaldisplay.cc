@@ -286,6 +286,35 @@ std::string Display::new_frame( bool initialized, const Framebuffer &last, const
     frame.current_rendition = f.ds.get_renditions();
   }
 
+  /* has bracketed paste mode changed? */
+  if ( (!initialized)
+       || (f.ds.bracketed_paste != frame.last_frame.ds.bracketed_paste) ) {
+    frame.append( f.ds.bracketed_paste ? "\033[?2004h" : "\033[?2004l" );
+  }
+
+  /* has xterm VT100 mouse mode changed? */
+  if ( (!initialized)
+       || (f.ds.vt100_mouse != frame.last_frame.ds.vt100_mouse) ) {
+    frame.append( f.ds.vt100_mouse ? "\033[?1000h" : "\033[?1000l" );
+  }
+
+  /* has xterm mouse mode changed? */
+  if ( (!initialized)
+       || (f.ds.xterm_mouse != frame.last_frame.ds.xterm_mouse) ) {
+    frame.append( f.ds.xterm_mouse ? "\033[?1002h" : "\033[?1002l" );
+  }
+
+  /* has xterm mouse mode changed? */
+  if ( (!initialized)
+       || (f.ds.xterm_extended_mouse != frame.last_frame.ds.xterm_extended_mouse) ) {
+    frame.append( f.ds.xterm_extended_mouse ? "\033[?1006h" : "\033[?1006l" );
+  }
+  
+  if ( (!initialized)
+       || (f.ds.xterm_utf8_mouse != frame.last_frame.ds.xterm_utf8_mouse) ) {
+    frame.append( f.ds.xterm_utf8_mouse ? "\033[?1005h" : "\033[?1005l" );
+  }
+
   return frame.str;
 }
 
