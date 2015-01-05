@@ -54,12 +54,6 @@ private:
   bool escape_requires_lf;
   std::wstring escape_key_help;
 
-  int escape_key;
-  int escape_pass_key;
-  int escape_pass_key2;
-  bool escape_requires_lf;
-  std::wstring escape_key_help;
-
   struct termios saved_termios, raw_termios;
 
   struct winsize window_size;
