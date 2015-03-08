@@ -61,6 +61,7 @@ TransportSender<MyState>::TransportSender( Connection *s_connection, MyState &in
     pending_data_ack( false ),
     SEND_MINDELAY( 8 ),
     last_heard( 0 ),
+    oob_ctl(),
     prng(),
     mindelay_clock( -1 )
 {

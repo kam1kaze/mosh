@@ -60,16 +60,20 @@ namespace Agent {
     uint64_t idle_start;
     string packet_buf;
     size_t packet_len;
+    ProxyAgent *agent_ptr;
+
     AgentConnection(int sock, uint64_t id, ProxyAgent *s_agent_ptr);
     AgentConnection(std::string agent_path, uint64_t id, ProxyAgent *s_agent_ptr);
     ~AgentConnection();
+    AgentConnection(const AgentConnection&);    // unimplemented
+    AgentConnection operator=(const AgentConnection&);  // unimplemented
+
     int sock() { return s_sock; }
     bool eof() { return (s_sock < 0); }
     std::string recv_packet();
     uint64_t idle_time();
     void mark_in_read_set(bool val) { s_in_read_set = val; }
     bool in_read_set( void ) { return s_in_read_set; }
-    ProxyAgent *agent_ptr;
 
   public:
     friend class ProxyAgent;
@@ -78,12 +82,8 @@ namespace Agent {
   class ProxyAgent : public Network::OutOfBandPlugin
   {
   private:
-    void detach_oob(void);
     Network::OutOfBandCommunicator *comm;
     Network::OutOfBand *oob_ctl_ptr;
-    Network::OutOfBand *oob( void ) { return oob_ctl_ptr; }
-    void notify_eof(uint64_t agent_id);
-    AgentConnection *get_session();
     bool server;
     bool ok;
     int l_sock;
@@ -91,6 +91,14 @@ namespace Agent {
     string l_path;
     uint64_t cnt;
     std::map< uint64_t, AgentConnection * > agent_sessions;
+
+    void detach_oob(void);
+    Network::OutOfBand *oob( void ) { return oob_ctl_ptr; }
+    void notify_eof(uint64_t agent_id);
+    AgentConnection *get_session();
+
+    ProxyAgent(const ProxyAgent&);    // unimplemented
+    ProxyAgent operator=(const ProxyAgent&);  // unimplemented
 
   public:
     // Required by parent class

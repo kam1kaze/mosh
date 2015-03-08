@@ -69,15 +69,17 @@ using std::map;
 using Network::OutOfBand;
 using Network::OutOfBandCommunicator;
 
-ProxyAgent::ProxyAgent( bool is_server, bool dummy ) {
-  server = is_server;
-  ok = false;
-  l_sock = -1;
-  l_dir = "";
-  l_path = "";
-  cnt = 0;
-  oob_ctl_ptr = NULL;
-  comm = NULL;
+ProxyAgent::ProxyAgent( bool is_server, bool dummy )
+  : comm( NULL ),
+    oob_ctl_ptr( NULL ),
+    server( is_server ),
+    ok( false ),
+    l_sock( -1 ),
+    l_dir( "" ),
+    l_path( "" ),
+    cnt( 0 ),
+    agent_sessions()
+{
 #ifdef SUPPORT_AGENT_FORWARDING
   if ( dummy ) {
     return;
@@ -366,27 +368,32 @@ AgentConnection *ProxyAgent::get_session() {
 #endif
 }
 
-AgentConnection::AgentConnection(int sock, uint64_t id, ProxyAgent *s_agent_ptr) {
-  agent_ptr = s_agent_ptr;
-  s_sock = sock;
-  s_id = id;
-  s_in_read_set = false;
+AgentConnection::AgentConnection(int sock, uint64_t id, ProxyAgent *s_agent_ptr)
+  : s_in_read_set( false ),
+    s_sock( sock ),
+    s_id( id ),
+    idle_start( Network::timestamp() ),
+    packet_buf( "" ),
+    packet_len( 0 ),
+    agent_ptr( s_agent_ptr )
+{
 #ifndef SUPPORT_AGENT_FORWARDING
   if (sock >= 0) {
     (void) close( sock );
   }
   s_sock = -1;
 #endif
-  idle_start = Network::timestamp();
-  packet_buf = "";
-  packet_len = 0;
 }
 
-AgentConnection::AgentConnection(std::string agent_path, uint64_t id, ProxyAgent *s_agent_ptr) {
-  agent_ptr = s_agent_ptr;
-  s_sock = -1;
-  s_id = id;
-  s_in_read_set = false;
+AgentConnection::AgentConnection(std::string agent_path, uint64_t id, ProxyAgent *s_agent_ptr)
+  : s_in_read_set( false ),
+    s_sock( -1 ),
+    s_id( id ),
+    idle_start( Network::timestamp() ),
+    packet_buf( "" ),
+    packet_len( 0 ),
+    agent_ptr( s_agent_ptr )
+{
 #ifdef SUPPORT_AGENT_FORWARDING
   int sock = socket( AF_UNIX, SOCK_STREAM, 0 );
   struct sockaddr_un sunaddr;
@@ -411,9 +418,6 @@ AgentConnection::AgentConnection(std::string agent_path, uint64_t id, ProxyAgent
   }
   s_sock = sock;
 #endif
-  idle_start = Network::timestamp();
-  packet_buf = "";
-  packet_len = 0;
 }
 
 AgentConnection::~AgentConnection() {

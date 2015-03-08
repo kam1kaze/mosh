@@ -50,7 +50,14 @@ using namespace OutOfBandBuffers;
 using namespace std;
 
 
-OutOfBand::OutOfBand() {
+OutOfBand::OutOfBand()
+  : comms(),
+    datagram_instruction_out(),
+    reliable_instruction_out_sent(),
+    reliable_instruction_out_unsent(),
+    seq_num_out( 0 ),
+    ack_num_out( 0 )
+{
   seq_num_out = 0;
   ack_num_out = 0;
 }
@@ -238,12 +245,16 @@ string OutOfBand::output(void) {
   return "";
 }
 
-OutOfBandCommunicator::OutOfBandCommunicator(OutOfBandMode oob_mode, string oob_name, OutOfBand *oob_ctl, OutOfBandPlugin *plugin) {
-  mode = oob_mode;
-  name = oob_name;
-  oob_ctl_ptr = oob_ctl;
-  plugin_ptr = plugin;
-  stream_buf = "";
+OutOfBandCommunicator::OutOfBandCommunicator( OutOfBandMode oob_mode, string oob_name,
+                                              OutOfBand *oob_ctl, OutOfBandPlugin *plugin)
+  : mode( oob_mode ),
+    name( oob_name ),
+    stream_buf( "" ),
+    datagram_queue(),
+    plugin_ptr( plugin ),
+    oob_ctl_ptr( oob_ctl )
+{
+  /* */
 }
 
 void OutOfBandCommunicator::send(string data) {

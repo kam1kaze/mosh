@@ -68,6 +68,8 @@ namespace Network {
     OutOfBand *oob_ctl_ptr;
     OutOfBand *oob(void) { return oob_ctl_ptr; }
     OutOfBandCommunicator(OutOfBandMode oob_mode, string oob_name, OutOfBand *oob_ctl, OutOfBandPlugin *plugin);
+    OutOfBandCommunicator(const OutOfBandCommunicator&);
+    OutOfBandCommunicator operator=(const OutOfBandCommunicator&);
 
   public:
     void send(string data);
