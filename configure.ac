@@ -177,7 +177,7 @@ AC_SEARCH_LIBS([socket], [socket])
 AC_SEARCH_LIBS([inet_addr], [nsl])
 
 # Checks for header files.
-AC_CHECK_HEADERS([m4_normalize([
+AC_CHECK_HEADERS(m4_normalize([
   errno.h
   fcntl.h
   langinfo.h
