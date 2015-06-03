@@ -199,7 +199,7 @@ AC_CHECK_HEADERS([m4_normalize([
   unistd.h
   wchar.h
   wctype.h
-  ])], [], [AC_MSG_ERROR([Missing required header file.])])
+  ]), [], [AC_MSG_ERROR([Missing required header file.])])
 
 AC_CHECK_HEADERS([pty.h util.h libutil.h paths.h])
 AC_CHECK_HEADERS([endian.h sys/endian.h])
@@ -226,7 +226,7 @@ AC_TYPE_UINTPTR_T
 # Checks for library functions.
 AC_FUNC_FORK
 AC_FUNC_MBRTOWC
-AC_CHECK_FUNCS([m4_normalize([
+AC_CHECK_FUNCS(m4_normalize([
   gettimeofday
   setrlimit
   iswprint
@@ -249,7 +249,7 @@ AC_CHECK_FUNCS([m4_normalize([
   pselect
   getaddrinfo
   getnameinfo
-  ])])
+  ]))
 
 AC_SEARCH_LIBS([clock_gettime], [rt], [AC_DEFINE([HAVE_CLOCK_GETTIME], [1], [Define if clock_gettime is available.])])
 
