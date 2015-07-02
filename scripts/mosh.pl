@@ -51,6 +51,8 @@ my $ssh = 'ssh';
 
 my $term_init = 1;
 
+my $forward_agent = 0;
+
 my $help = undef;
 my $version = undef;
 
@@ -78,6 +80,8 @@ qq{Usage: $0 [options] [--] [user@]host [command...]
         --ssh=COMMAND        ssh command to run when setting up session
                                 (example: "ssh -p 2222")
                                 (default: "ssh")
+
+-A      --forward-agent      enable ssh agent forwarding
 
         --no-init            do not send terminal initialization string
 
@@ -116,6 +120,8 @@ GetOptions( 'client=s' => \$client,
 	    '6' => sub { $family = 'inet6' },
 	    'p=s' => \$port_request,
 	    'ssh=s' => \$ssh,
+            'A' => \$forward_agent,
+            'forward-agent!' => \$forward_agent,
 	    'init!' => \$term_init,
 	    'help' => \$help,
 	    'version' => \$version,
@@ -262,6 +268,10 @@ if ( $pid == 0 ) { # child
 
   my @server = ( 'new' );
 
+  if ( $forward_agent ) {
+    push @server, ( '-A' );
+  }
+
   push @server, ( '-c', $colors );
 
   push @server, @bind_arguments;
@@ -322,7 +332,14 @@ if ( $pid == 0 ) { # child
   $ENV{ 'MOSH_KEY' } = $key;
   $ENV{ 'MOSH_PREDICTION_DISPLAY' } = $predict;
   $ENV{ 'MOSH_NO_TERM_INIT' } = '1' if !$term_init;
-  exec {$client} ("$client @cmdline |", $ip, $port);
+  
+  my @client_av = ();
+  if ( $forward_agent ) {
+    push @client_av, ( '-A' );
+  }
+  push @client_av, ( $ip, $port );
+
+  exec {$client} ("$client @cmdline |", @client_av);
 }
 
 sub shell_quote { join ' ', map {(my $a = $_) =~ s/'/'\\''/g; "'$a'"} @_ }
