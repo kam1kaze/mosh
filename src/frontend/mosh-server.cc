@@ -327,9 +327,9 @@ int main( int argc, char *argv[] )
 
   try {
     return run_server( desired_ip, desired_port, command_path, command_argv, colors, verbose, with_motd, with_agent_fwd );
-  } catch ( const Network::NetworkException& e ) {
-    fprintf( stderr, "Network exception: %s: %s\n",
-	     e.function.c_str(), strerror( e.the_errno ) );
+  } catch ( const Network::NetworkException &e ) {
+    fprintf( stderr, "Network exception: %s\n",
+	     e.what() );
     return 1;
   } catch ( const Crypto::CryptoException &e ) {
     fprintf( stderr, "Crypto exception: %s\n",
@@ -523,10 +523,10 @@ int run_server( const char *desired_ip, const char *desired_port,
 
     try {
       serve( master, terminal, *network, agent );
-    } catch ( const Network::NetworkException& e ) {
-      fprintf( stderr, "Network exception: %s: %s\n",
-	       e.function.c_str(), strerror( e.the_errno ) );
-    } catch ( const Crypto::CryptoException& e ) {
+    } catch ( const Network::NetworkException &e ) {
+      fprintf( stderr, "Network exception: %s\n",
+	       e.what() );
+    } catch ( const Crypto::CryptoException &e ) {
       fprintf( stderr, "Crypto exception: %s\n",
 	       e.what() );
     }
